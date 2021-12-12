@@ -18,7 +18,11 @@ exports.initConfig = function (initconfig) {
 	consoleWrapper.log = function () {
 		// default is to log unless specifically disabled
 		if (initconfig.logging !== false) {
-			console.log.apply(this, arguments);
+			if (initconfig.logger) {
+				initconfig.logger.info.apply(this, arguments);
+			} else {
+				console.log.apply(this, arguments);
+			}
 		}
 	}
 
@@ -144,9 +148,9 @@ exports.initConfig = function (initconfig) {
 				var zoneId = parseInt(data.substring(3, 6));
 				var evtData = {
 					evtType: "zoneUpdate",
-					zone: zoneId, 
-					code: data.substring(0, 3), 
-					status: tpi.send 
+					zone: zoneId,
+					code: data.substring(0, 3),
+					status: tpi.send
 				};
 				if( config.zoneInfo && config.zoneInfo[zoneId] && config.zoneInfo[zoneId].label)
 					evtData.zoneLabel = config.zoneInfo[zoneId].label;
@@ -167,11 +171,11 @@ exports.initConfig = function (initconfig) {
 				//eventEmitter.emit('partitionupdate', [partition, alarmdata.partition[partition]]);
 				var cmd = data.substring(0,3);
 				var partId = parseInt(data.substring(3,4));
-				var evtData = { 
+				var evtData = {
 					evtType: "partitionUpdate",
-					partition: partId, 
-					code: data.substring(0, 3), 
-					status: tpi.send 
+					partition: partId,
+					code: data.substring(0, 3),
+					status: tpi.send
 				};
 				if (cmd == "652") {		// Partition Armed
 					var armModeInt = parseInt(data.substring(4,5));
