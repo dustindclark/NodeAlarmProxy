@@ -19,7 +19,7 @@ exports.initConfig = function (initconfig) {
 		// default is to log unless specifically disabled
 		if (initconfig.logging !== false) {
 			if (initconfig.logger) {
-				initconfig.logger.info.apply(this, arguments);
+				initconfig.logger.apply(this, arguments);
 			} else {
 				console.log.apply(this, arguments);
 			}
