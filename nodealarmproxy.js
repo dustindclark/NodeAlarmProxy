@@ -162,6 +162,15 @@ exports.initConfig = function (initconfig) {
 			}
 		}
 	}
+
+	function coderequired(tpi) {
+		var evtData = {
+			evtType: "codeRequired",
+			status: tpi.send
+		};
+		eventEmitter.emit('coderequired', evtData);
+	}
+
 	function updatepartition(tpi, data) {
 		var partition = parseInt(data.substring(3, 4));
 		var initialUpdate = alarmdata.partition[partition] === undefined;
@@ -274,8 +283,10 @@ exports.initConfig = function (initconfig) {
 			if (datapacket !== '') {
 				var tpi = elink.tpicommands[datapacket.substring(0, 3)];
 				if (tpi) {
-					if (tpi.bytes === '' || tpi.bytes === 0) {
-						consoleWrapper.log(tpi.pre, tpi.post);
+					if(tpi.action === 'coderequired') {
+						coderequired(tpi);
+					} else if (tpi.bytes === '' || tpi.bytes === 0) {
+						consoleWrapper.log('Empty response:', tpi.pre, tpi.post);
 					} else {
 						consoleWrapper.log(tpi.pre, datapacket.substring(3, datapacket.length - 2), tpi.post);
 						if (tpi.action === 'updatezone') {
