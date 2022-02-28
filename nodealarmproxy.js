@@ -9,22 +9,23 @@ var alarmdata = {
 	partition: {},
 	user: {}
 };
+const { createLogger, transports, format } = require('winston');
 
-var actual, server, config;
-var consoleWrapper = new Object();
+var actual, server, config, log;
 var commandCallback = undefined;
+const { splat, combine, timestamp, label, printf, simple } = format;
 
 exports.initConfig = function (initconfig) {
-	consoleWrapper.log = function () {
-		// default is to log unless specifically disabled
-		if (initconfig.logging !== false) {
-			if (initconfig.logger) {
-				initconfig.logger.apply(this, arguments);
-			} else {
-				console.log.apply(this, arguments);
-			}
-		}
-	}
+	log = initconfig.logger ? initconfig.logger : createLogger({
+		format: combine(
+			label({ label: 'NodeAlarmProxy', message: true }),
+			simple()
+		),
+		transports: [
+			new transports.Console(),
+		]
+	});
+	log.info("Starting Envisalink connection...");
 
 	config = initconfig;
 	if (!config.actualport) {
@@ -35,8 +36,8 @@ exports.initConfig = function (initconfig) {
 	}
 
 	actual = net.connect({ port: config.actualport, host: config.actualhost }, function () {
-		consoleWrapper.log('actual connected');
-	}).on('error', (err)=> consoleWrapper.log("Failed to connect to Envisalink", err));
+		log.debug('actual connected');
+	}).on('error', (err)=> log.error("Failed to connect to Envisalink", err));
 
 	if (config.proxyenable) {
 		if (!config.serverport) {
@@ -49,36 +50,36 @@ exports.initConfig = function (initconfig) {
 			config.serverpassword = config.actualpassword;
 		}
 		var server = net.createServer(function (c) { //'connection' listener
-			consoleWrapper.log('server connected');
+			log.debug('server connected');
 			connections.push(c);
 
 			c.on('error', function (e) {
-				consoleWrapper.log('error', e);
+				log.error('error', e);
 				connections = [];
 			});
 
 			c.on('end', function () {
 				var index = connections.indexOf(c);
 				if (~index) connections.splice(index, 1);
-				consoleWrapper.log('server disconnected:', connections);
+				log.error('server disconnected:', connections);
 			});
 
 			c.on('data', function (data) {
-				consoleWrapper.log('data', data.toString());
+				log.debug('data', data.toString());
 				var dataslice = data.toString().replace(/[\n\r]/g, ',').split(',');
 
 				for (var i = 0; i < dataslice.length; i++) {
 					var rec = elink.applicationcommands[dataslice[i].substring(0, 3)];
 					if (rec) {
 						if (rec.bytes === '' || rec.bytes === 0) {
-							consoleWrapper.log(rec.pre, rec.post);
+							log.debug(rec.pre, rec.post);
 						} else {
-							consoleWrapper.log(rec.pre, dataslice[i].substring(3, dataslice[i].length - 2), rec.post);
+							log.debug(rec.pre, dataslice[i].substring(3, dataslice[i].length - 2), rec.post);
 						}
 						if (rec.action === 'checkpassword') {
 							checkpassword(c, dataslice[i]);
 						}
-						consoleWrapper.log('rec.action', rec.action);
+						log.debug('rec.action', rec.action);
 						if (rec.action === 'forward') {
 							sendforward(dataslice[i].substring(0, dataslice[i].length - 2));
 						}
@@ -91,29 +92,29 @@ exports.initConfig = function (initconfig) {
 			c.pipe(c);
 		});
 		server.listen(config.serverport, config.serverhost, function () { //'listening' listener
-			consoleWrapper.log('server bound');
+			log.debug('proxy server bound');
 		});
 
 		function checkpassword(c, data) {
 			if (data.substring(3, data.length - 2) == config.serverpassword) {
-				consoleWrapper.log('Correct Password! :)');
+				log.debug('Correct Password! :)');
 				sendcommand(c, '5051');
 			} else {
-				consoleWrapper.log('Incorrect Password :(');
+				log.error('Incorrect Password :(');
 				sendcommand(c, '5050');
 				c.end();
 			}
 		}
 
 		function sendforward(data) {
-			consoleWrapper.log('sendforward:', data);
+			log.debug('sendforward:', data);
 			sendcommand(actual, data);
 		}
 
 		function broadcastresponse(response) {
 			if (connections.length > 0) {
 				for (var i = 0; i < connections.length; i++) {
-					consoleWrapper.log('response', response);
+					log.debug('response', response);
 					sendcommand(connections[i], response);
 				}
 			}
@@ -123,17 +124,17 @@ exports.initConfig = function (initconfig) {
 	function loginresponse(data) {
 		var loginStatus = data.substring(3, 4);
 		if (loginStatus === '0') {
-			consoleWrapper.log('Incorrect Password :(');
+			log.error('Incorrect Password :(');
 		}
 		if (loginStatus === '1') {
-			consoleWrapper.log('successfully logged in!  getting current data...');
+			log.info('Envisalink successfully logged in!  getting current data...');
 			sendcommand(actual, '001');
 		}
 		if (loginStatus === '2') {
-			consoleWrapper.log('Request for Password Timed Out :(');
+			log.error('Envisalink request for Password Timed Out :(');
 		}
 		if (loginStatus === '3') {
-			consoleWrapper.log('login requested... sending response...');
+			log.info('Envisalink login requested... sending response...');
 			sendcommand(actual, '005' + config.password);
 		}
 	}
@@ -286,9 +287,9 @@ exports.initConfig = function (initconfig) {
 					if(tpi.action === 'coderequired') {
 						coderequired(tpi);
 					} else if (tpi.bytes === '' || tpi.bytes === 0) {
-						consoleWrapper.log('Empty response:', tpi.pre, tpi.post);
+						log.warn('Empty response:', tpi.pre, tpi.post);
 					} else {
-						consoleWrapper.log(tpi.pre, datapacket.substring(3, datapacket.length - 2), tpi.post);
+						log.debug(tpi.pre, datapacket.substring(3, datapacket.length - 2), tpi.post);
 						if (tpi.action === 'updatezone') {
 							updatezone(tpi, datapacket);
 						}
@@ -325,7 +326,7 @@ exports.initConfig = function (initconfig) {
 		//actual.end();
 	});
 	actual.on('end', function () {
-		consoleWrapper.log('actual disconnected');
+		log.error('Envisalink actual disconnected');
 	});
 
 	return eventEmitter;
@@ -337,7 +338,7 @@ function sendcommand(addressee, command) {
 		checksum += command.charCodeAt(i);
 	}
 	checksum = checksum.toString(16).slice(-2).toUpperCase();
-	consoleWrapper.log('sendcommand', command + checksum)
+	log.debug('sendcommand', command + checksum)
 	addressee.write(command + checksum + '\r\n');
 }
 
