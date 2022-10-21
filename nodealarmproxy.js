@@ -39,7 +39,7 @@ exports.initConfig = function (initconfig) {
 		log.debug('actual connected');
 	}).on('error', (err)=> {
 		log.error("Failed to connect to Envisalink", err)
-		eventEmitter.emit('connectError', err);
+		eventEmitter.emit('connecterror', err);
 	});
 
 	if (config.proxyenable) {
