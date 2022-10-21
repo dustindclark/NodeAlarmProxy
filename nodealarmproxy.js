@@ -41,7 +41,7 @@ exports.initConfig = function (initconfig) {
 		log.error("Failed to connect to Envisalink", err);
 		if (this.server) {
 			try {
-				server.close();
+				this.server.close();
 			} catch (se) {
 				log.error("Failed stopping proxy server", se);
 			}
