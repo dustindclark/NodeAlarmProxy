@@ -40,13 +40,7 @@ exports.initConfig = function (initconfig) {
 		log.debug('actual connected');
 	}).on('error', (err)=> {
 		log.error("Failed to connect to Envisalink", err);
-		if (server) {
-			try {
-				server.close();
-			} catch (se) {
-				log.error("Failed stopping proxy server", se);
-			}
-		}
+		disconnectServer();
 		eventEmitter.emit('connecterror', err);
 	});
 
@@ -287,6 +281,16 @@ exports.initConfig = function (initconfig) {
 
 	}
 
+	function disconnectServer() {
+		if (server) {
+			try {
+				server.close();
+			} catch (se) {
+				log.error("Failed stopping proxy server", se);
+			}
+		}
+	}
+
 	actual.on('data', function (data) {
 		var dataslice = data.toString().replace(/[\n\r]/g, ',').split(',');
 
@@ -337,6 +341,8 @@ exports.initConfig = function (initconfig) {
 		//actual.end();
 	});
 	actual.on('end', function () {
+		disconnectServer();
+		eventEmitter.emit('connectionended', err);
 		log.error('Envisalink actual disconnected');
 	});
 
