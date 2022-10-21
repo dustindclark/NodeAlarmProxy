@@ -342,7 +342,7 @@ exports.initConfig = function (initconfig) {
 	});
 	actual.on('end', function () {
 		disconnectServer();
-		eventEmitter.emit('connectionended', err);
+		eventEmitter.emit('connectionended');
 		log.error('Envisalink actual disconnected');
 	});
 
