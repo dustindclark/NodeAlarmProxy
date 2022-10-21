@@ -34,6 +34,7 @@ exports.initConfig = function (initconfig) {
 	if (!config.proxyenable) {
 		config.proxyenable = false;
 	}
+	eventEmitter.removeAllListeners();
 
 	actual = net.connect({ port: config.actualport, host: config.actualhost }, function () {
 		log.debug('actual connected');
