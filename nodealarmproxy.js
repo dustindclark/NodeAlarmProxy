@@ -39,9 +39,9 @@ exports.initConfig = function (initconfig) {
 		log.debug('actual connected');
 	}).on('error', (err)=> {
 		log.error("Failed to connect to Envisalink", err);
-		if (this.server) {
+		if (server) {
 			try {
-				this.server.close();
+				server.close();
 			} catch (se) {
 				log.error("Failed stopping proxy server", se);
 			}
@@ -59,7 +59,7 @@ exports.initConfig = function (initconfig) {
 		if (!config.serverpassword) {
 			config.serverpassword = config.actualpassword;
 		}
-		this.server = net.createServer(function (c) { //'connection' listener
+		server = net.createServer(function (c) { //'connection' listener
 			log.debug('server connected');
 			connections.push(c);
 
