@@ -37,7 +37,10 @@ exports.initConfig = function (initconfig) {
 
 	actual = net.connect({ port: config.actualport, host: config.actualhost }, function () {
 		log.debug('actual connected');
-	}).on('error', (err)=> log.error("Failed to connect to Envisalink", err));
+	}).on('error', (err)=> {
+		log.error("Failed to connect to Envisalink", err)
+		eventEmitter.emit('connectError', err);
+	});
 
 	if (config.proxyenable) {
 		if (!config.serverport) {
