@@ -38,7 +38,14 @@ exports.initConfig = function (initconfig) {
 	actual = net.connect({ port: config.actualport, host: config.actualhost }, function () {
 		log.debug('actual connected');
 	}).on('error', (err)=> {
-		log.error("Failed to connect to Envisalink", err)
+		log.error("Failed to connect to Envisalink", err);
+		if (this.server) {
+			try {
+				server.close();
+			} catch (se) {
+				log.error("Failed stopping proxy server", se);
+			}
+		}
 		eventEmitter.emit('connecterror', err);
 	});
 
@@ -52,7 +59,7 @@ exports.initConfig = function (initconfig) {
 		if (!config.serverpassword) {
 			config.serverpassword = config.actualpassword;
 		}
-		var server = net.createServer(function (c) { //'connection' listener
+		this.server = net.createServer(function (c) { //'connection' listener
 			log.debug('server connected');
 			connections.push(c);
 
